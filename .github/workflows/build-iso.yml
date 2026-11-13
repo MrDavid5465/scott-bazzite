@@ -26,7 +26,10 @@ jobs:
   build:
     name: Build installer ISO
     runs-on: ubuntu-26.04
-    container: registry.fedoraproject.org/fedora:${{ inputs.fedora || '45' }}
+    container:
+      image: registry.fedoraproject.org/fedora:${{ inputs.fedora || '45' }}
+      # mkksiso rebuilds the ISO's EFI boot image on a loop device, which needs a privileged container
+      options: --privileged
     permissions:
       contents: read
     env:
