@@ -1,0 +1,4 @@
+# Signatures for this repo's images are cosign attachments in the registry next to the image.
+docker:
+  ghcr.io/mrdavid5465:
+    use-sigstore-attachments: true

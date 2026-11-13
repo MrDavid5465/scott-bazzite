@@ -15,3 +15,17 @@ cp -avf "/ctx/system_files"/. /
 dnf5 install -y \
     sssd-ad adcli oddjob-mkhomedir krb5-workstation sssd-tools \
     krb5-pkinit tpm2-pkcs11 tpm2-pkcs11-tools gcc
+
+# Trust this repo's cosign key for ghcr.io/mrdavid5465 (both variants), the way Bazzite trusts ublue-os's, so
+# machines can rebase to ostree-image-signed:docker://ghcr.io/mrdavid5465/... and updates check the signature.
+# The registries.d entry from system_files/ tells containers/image where the signatures are.
+install -Dm0644 /ctx/cosign.pub /etc/pki/containers/scott-bazzite.pub
+POLICY=/etc/containers/policy.json
+test -f "$POLICY"
+command -v jq >/dev/null || dnf5 install -y jq
+jq '.transports.docker["ghcr.io/mrdavid5465"] = [{
+      "type": "sigstoreSigned",
+      "keyPath": "/etc/pki/containers/scott-bazzite.pub",
+      "signedIdentity": {"type": "matchRepository"}
+    }]' "$POLICY" > /tmp/policy.json
+install -m0644 /tmp/policy.json "$POLICY"

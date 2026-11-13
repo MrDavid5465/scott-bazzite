@@ -22,8 +22,18 @@ concurrency:
 
 jobs:
   build_push:
-    name: Build and push image
+    name: Build and push ${{ matrix.image_name }}
     runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: scott-bazzite
+            base_image: ghcr.io/ublue-os/bazzite-dx:stable
+          - image_name: scott-bazzite-nvidia
+            base_image: ghcr.io/ublue-os/bazzite-dx-nvidia:stable
+    env:
+      BASE_IMAGE: ${{ matrix.base_image }}
 
     permissions:
       contents: read
@@ -49,7 +59,7 @@ jobs:
       - name: Image Name
         id: image-name
         run: |
-          IMAGE_NAME=$(just image_name)
+          IMAGE_NAME=${{ matrix.image_name }}
 
           echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
 
