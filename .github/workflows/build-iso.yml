@@ -1,0 +1,67 @@
+---
+# Installer ISO for scott-bazzite: Fedora's Everything netinstall ISO with iso/scott-bazzite.ks embedded (mkksiso),
+# so Anaconda installs ghcr.io/mrdavid5465/scott-bazzite over the network. Replaces the template's
+# bootc-image-builder workflow (archived upstream; its anaconda-iso couldn't depsolve against Bazzite).
+name: Build installer ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      fedora:
+        description: "Fedora release of the netinstall ISO (match the image's)"
+        required: true
+        default: "45"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'iso/**'
+      - '.github/workflows/build-iso.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build installer ISO
+    runs-on: ubuntu-26.04
+    container: registry.fedoraproject.org/fedora:${{ inputs.fedora || '45' }}
+    permissions:
+      contents: read
+    env:
+      FEDORA: ${{ inputs.fedora || '45' }}
+
+    steps:
+      - name: Install tools
+        run: dnf -y install --setopt=install_weak_deps=False lorax xorriso mtools curl git
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Download the netinstall ISO
+        run: |
+          set -euo pipefail
+          BASE=https://dl.fedoraproject.org/pub/fedora/linux/releases/${FEDORA}/Everything/x86_64/iso
+          CHECKSUM=$(curl -fsSL "$BASE/" | grep -o "Fedora-Everything-${FEDORA}-[^\"]*-x86_64-CHECKSUM" | sort -u | head -1)
+          curl -fsSLO "$BASE/$CHECKSUM"
+          ISO=$(grep -o "Fedora-Everything-netinst-x86_64-${FEDORA}-[^ )]*\.iso" "$CHECKSUM" | sort -u | head -1)
+          curl -fsSLO "$BASE/$ISO"
+          sha256sum --ignore-missing -c "$CHECKSUM"
+          echo "ISO=$ISO" >> "$GITHUB_ENV"
+
+      - name: Embed the kickstart
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          mkksiso --ks iso/scott-bazzite.ks "$ISO" "output/scott-bazzite-${FEDORA}-$(date +%Y%m%d).iso"
+          cd output && sha256sum *.iso > SHA256SUMS && ls -l
+
+      - name: Upload ISO
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scott-bazzite-iso
+          path: output/
+          if-no-files-found: error
+          compression-level: 0

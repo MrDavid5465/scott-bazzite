@@ -15,9 +15,11 @@ What's added is in [`build_files/build.sh`](build_files/build.sh): the packages,
 
 ## Install
 
-**New machine (Intel/AMD):** run the *Build disk images* workflow and install from its `anaconda-iso` artifact. The
-installer switches to `scott-bazzite` at the end ([`disk_config/iso.toml`](disk_config/iso.toml)). After the first
-boot, turn on signature checking (the image now trusts its own key):
+**New machine (Intel/AMD):** run the *Build installer ISO* workflow and write its `scott-bazzite-iso` artifact to
+a USB stick. It's Fedora's Everything netinstall ISO with [`iso/scott-bazzite.ks`](iso/scott-bazzite.ks) embedded:
+Anaconda asks for the disk, user and time zone as usual, then installs `scott-bazzite` over the network (wired or
+Wi-Fi set up in the installer). The install doesn't check the signature, so after the first boot turn signature
+checking on (the image trusts its own key):
 
 ```bash
 sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/mrdavid5465/scott-bazzite:latest
